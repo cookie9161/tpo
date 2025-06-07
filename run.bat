@@ -1,0 +1,3 @@
+echo ✅ Gotowe! Teraz uruchamiam aplikację Spring Boot...
+java -jar app-0.1.0-SNAPSHOT.jar -Dspring.profiles.active=local
+pause

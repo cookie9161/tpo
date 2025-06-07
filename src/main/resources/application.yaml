@@ -1,0 +1,27 @@
+server:
+  port: 8080
+
+spring:
+    datasource:
+        url: jdbc:sqlserver://host.docker.internal:1433;databaseName=movie_database;encrypt=true;trustServerCertificate=true
+        username: sa
+        password: YourStrong!Passw0rd
+        driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    jpa:
+      hibernate:
+          ddl-auto: update
+          naming:
+            physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+      database-platform: org.hibernate.dialect.SQLServerDialect
+    main:
+      allow-bean-definition-overriding: true
+    profiles:
+      active: local
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui

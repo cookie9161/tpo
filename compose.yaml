@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: movie-mssql-container
+    ports:
+      - "1433:1433"
+    environment:
+      SA_PASSWORD: YourStrong!Passw0rd
+      ACCEPT_EULA: "Y"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - movie-network
+  db-init:
+    image: mcr.microsoft.com/mssql-tools
+    container_name: mssql-init
+    depends_on:
+      - sqlserver
+    entrypoint: >
+      bash -c "
+              echo 'Czekam na SQL Server...';
+              for i in {1..30}; do
+                /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P YourStrong!Passw0rd -Q 'SELECT 1' && break || sleep 2;
+              done &&
+              echo 'SQL Server gotowy. Uruchamiam init-db.sql' &&
+              /opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P YourStrong!Passw0rd -i /init/init-db.sql
+            "
+    volumes:
+      - ./init:/init
+    networks:
+      - movie-network
+    restart: "no"
+
+networks:
+  movie-network:
+    driver: bridge
+volumes:
+  mssql-data:

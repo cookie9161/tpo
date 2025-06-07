@@ -1,0 +1,3 @@
+@echo off
+echo 🔄 Uruchamianie Docker Compose z bazą danych i inicjalizacją...
+docker-compose up --build

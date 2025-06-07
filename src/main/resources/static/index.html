@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Filmy</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #69746E;
+            color: white;
+            padding: 20px;
+        }
+
+        input, button, select {
+            margin: 5px;
+            padding: 5px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+            background: #333;
+        }
+
+        th, td {
+            border: 1px solid #555;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #444;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #2e2e2e;
+            padding: 20px;
+            border-radius: 10px;
+            width: 400px;
+        }
+
+        .modal-content input {
+            width: 95%;
+        }
+
+        .close {
+            float: right;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .clickable {
+            color: #9ed9ff;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<h1>🎬 Lista filmów</h1>
+<button onclick="openCreateModal()">➕ Dodaj nowy film</button>
+
+<label for="sortSelect">Sortuj po:</label>
+<select id="sortSelect" onchange="loadFilms()">
+    <option value="title">Tytuł</option>
+    <option value="releaseDate">Data Premiery</option>
+</select>
+
+<table>
+    <thead>
+    <tr>
+        <th>Tytuł</th>
+        <th>Reżyser</th>
+        <th>Data Premiery</th>
+        <th>Akcje</th>
+    </tr>
+    </thead>
+    <tbody id="filmTable"></tbody>
+</table>
+
+<!-- MODAL TWORZENIA -->
+<div id="createModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeCreateModal()">&times;</span>
+        <h2>Nowy Film</h2>
+        <form id="createForm">
+            <label for="createTitle">Tytuł:</label><br>
+                <input type="text" id="createTitle" placeholder="Tytuł" required><br></label>
+            <label for="createDescription">Opis:</label><br>
+                <input type="text" id="createDescription" placeholder="Opis" required><br></label>
+            <label for="directorFirstName">Imię reżysera:</label><br>
+                <input type="text" id="directorFirstName" placeholder="Imię reżysera" required><br></label>
+            <label for="directorLastName">Nazwisko reżysera:</label><br>
+                <input type="text" id="directorLastName" placeholder="Nazwisko reżysera" required><br></label>
+            <label for="directorBirthDate">Data urodzin reżysera:</label><br>
+                <input type="date" id="directorBirthDate" title="Wpisz datę urodzin reżysera" required><br></label>
+            <label for="createReleaseDate">Data premiery:</label><br>
+                <input type="date" id="createReleaseDate" title="Wpisz datę w formacie" required><br>
+            <label for="createDuration">Długość filmu:</label><br>
+                <input type="number" id="createDuration" step="1" placeholder="Długość filmu w minutach" required><br></label>
+            <label for="createRating">Ocena:</label><br>
+                <input type="number" id="createRating" step="0.1" min="0" max="10" placeholder="Ocena" required><br></label>
+            <label for="createGenre">Gatunek filmu:</label>
+                <select id="createGenre" required></select> <br>
+            <label for="createLanguage">Język filmu:</label><br>
+                <select  id="createLanguage" required></select><br>
+            <button type="submit">➕ Dodaj</button>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL EDYCJI -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeUpdateModal()">&times;</span>
+        <h2>Edytuj Film</h2>
+        <form id="editForm">
+            <input type="hidden" id="editMovieId">
+            <label><input type="text" id="title" placeholder="Tytuł" required><br></label>
+            <label><input type="text" id="description" placeholder="Opis" required><br></label>
+            <label><input type="date" id="releaseDate" title="Data Premiery" placeholder="Data Premiery" required><br></label>
+            <label><input type="number" id="duration" step="1" placeholder="Długość filmu w minutach" required><br></label>
+            <label><input type="number" id="rating" step="0.1" min="0" max="10" placeholder="Ocena" required><br></label>
+            <label for="editGenre">Gatunek filmu:</label>
+                <select id="editGenre" required></select> <br>
+            <label for="editLanguage">Język filmu:</label><br>
+                <select id="editLanguage" required></select><br>
+            <button type="submit">📂 Zapisz zmiany</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const API_URL = '/data/movies';
+
+    const languagesEnum = [
+        { value: "PL", label: "Polski" },
+        { value: "EN", label: "Angielski" },
+        { value: "FR", label: "Francuski" },
+        { value: "DE", label: "Niemiecki" }
+    ];
+
+    const genresEnum = [
+        { value: "ACTION", label: "Akcja" },
+        { value: "COMEDY", label: "Komedia" },
+        { value: "SCIFI", label: "Science-Fiction" },
+        { value: "ROMANTIC", label: "Romantyczny" }
+    ];
+
+    function populateSelectWithEnum(selectElement, enumArray) {
+        selectElement.innerHTML = '';
+        enumArray.forEach(({value, label}) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label;
+            selectElement.appendChild(option);
+        });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        populateSelectWithEnum(document.getElementById('createGenre'), genresEnum);
+        populateSelectWithEnum(document.getElementById('editGenre'), genresEnum);
+        populateSelectWithEnum(document.getElementById('createLanguage'), languagesEnum);
+        populateSelectWithEnum(document.getElementById('editLanguage'), languagesEnum);
+        loadFilms();
+    });
+
+    async function loadFilms() {
+        const sortBy = document.getElementById('sortSelect').value;
+        const response = await fetch(`${API_URL}?sort=${sortBy}`);
+        const movies = await response.json();
+
+        const table = document.getElementById('filmTable');
+        table.innerHTML = '';
+
+        movies.forEach(movie => {
+            const row = document.createElement('tr');
+            const fullDirectorName = `${movie.director.firstName} ${movie.director.lastName}`;
+
+            row.innerHTML = `
+                <td class="clickable" onclick="showDetails(${movie.id})">${movie.title}</td>
+                <td>${fullDirectorName}</td>
+                <td>${movie.releaseDate}</td>
+                <td>
+                    <button onclick="editFilm(${movie.id})">✏️ Edytuj</button>
+                    <button onclick="deleteFilm(${movie.id})">🗑️ Usuń</button>
+                </td>
+            `;
+
+            table.appendChild(row);
+        });
+    }
+
+    function openCreateModal() {
+        document.getElementById('createModal').style.display = 'flex';
+    }
+
+    function openEditModal() {
+        document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function closeCreateModal() {
+        document.getElementById('createModal').style.display = 'none';
+        document.getElementById('createForm').reset();
+    }
+
+    function closeUpdateModal() {
+        document.getElementById('editModal').style.display = 'none';
+        document.getElementById('editForm').reset();
+    }
+
+    async function showDetails(id) {
+        const movie = await (await fetch(`${API_URL}/${id}`)).json();
+        alert(`🎮 ${movie.title}\n📅 Premiera: ${movie.releaseDate}\n🎭 Gatunek: ${movie.genre}\n📖 Opis: ${movie.description}\n👨‍🎨 Reżyser: ${movie.director.firstName} ${movie.director.lastName}`);
+    }
+
+    async function editFilm(id) {
+        const movie = await (await fetch(`${API_URL}/${id}`)).json();
+
+        document.getElementById('editMovieId').value = movie.id;
+        document.getElementById('title').value = movie.title;
+        document.getElementById('description').value = movie.description;
+        document.getElementById('releaseDate').value = movie.releaseDate;
+        document.getElementById('duration').value = movie.duration;
+        document.getElementById('rating').value = movie.rating;
+        document.getElementById('editGenre').value = movie.genre;
+        document.getElementById('editLanguage').value = movie.language;
+
+        openEditModal();
+    }
+
+    async function deleteFilm(id) {
+        if (confirm("Czy na pewno chcesz usunąć ten film?")) {
+            const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                await loadFilms();
+            } else {
+                alert("❌ Błąd podczas usuwania filmu!");
+                console.error(await response.text());
+            }
+        }
+    }
+
+    document.getElementById('createForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const movieToCreate = {
+            title: document.getElementById("createTitle").value,
+            description: document.getElementById("createDescription").value,
+            releaseDate: document.getElementById("createReleaseDate").value,
+            duration: parseFloat(document.getElementById("createDuration").value),
+            rating: parseFloat(document.getElementById("createRating").value),
+            genre: document.getElementById("createGenre").value,
+            language: document.getElementById("createLanguage").value,
+            director: {
+                firstName: document.getElementById("directorFirstName").value,
+                lastName: document.getElementById("directorLastName").value,
+                birthDate: document.getElementById("directorBirthDate").value
+            }
+        };
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(movieToCreate)
+        });
+
+        if (response.ok) {
+            closeCreateModal();
+            await loadFilms();
+        } else {
+            alert("❌ Błąd przy dodawaniu filmu!");
+            console.error(await response.text());
+        }
+    });
+
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const id = document.getElementById('editMovieId').value;
+
+        const movieToUpdate = {
+            title: document.getElementById("title").value,
+            description: document.getElementById("description").value,
+            releaseDate: document.getElementById("releaseDate").value,
+            duration: parseFloat(document.getElementById("duration").value),
+            rating: parseFloat(document.getElementById("rating").value),
+            genre: document.getElementById("editGenre").value,
+            language: document.getElementById("editLanguage").value
+        };
+
+        const response = await fetch(`${API_URL}/${id}`, {
+            method: 'PUT',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(movieToUpdate)
+        });
+
+        if (response.ok) {
+            closeUpdateModal();
+            await loadFilms();
+        } else {
+            alert("❌ Błąd przy zapisywaniu zmian!");
+            console.error(await response.text());
+        }
+    });
+
+    window.onclick = function(event) {
+        if (event.target === document.getElementById('createModal')) closeCreateModal();
+        if (event.target === document.getElementById('editModal')) closeUpdateModal();
+    }
+</script>
+
+</body>
+</html>

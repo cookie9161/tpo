@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: jdbc:tc:mcr.microsoft.com/mssql/server:///testdb
+    username: sa
+    password: YourStrong!Passw0rd
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
